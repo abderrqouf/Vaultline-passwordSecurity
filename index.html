@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#080d16" />
+    <title>Vaultline — Password Security</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ink: "#080d16",
+              panel: "#111a27",
+              line: "#243247",
+              mint: "#55e6bd",
+              muted: "#8c9bb0",
+            },
+            boxShadow: {
+              glow: "0 0 42px rgba(85, 230, 189, .08)",
+            },
+          },
+        },
+      };
+    </script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+      defer
+    ></script>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        background:
+          radial-gradient(ellipse at 75% -15%, rgba(32, 91, 107, .22), transparent 42%),
+          radial-gradient(ellipse at 0% 40%, rgba(32, 57, 91, .16), transparent 38%),
+          #080d16;
+      }
+      .grid-texture {
+        background-image: linear-gradient(rgba(141, 171, 194, .025) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(141, 171, 194, .025) 1px, transparent 1px);
+        background-size: 40px 40px;
+        mask-image: linear-gradient(to bottom, black, transparent 76%);
+      }
+      .tab-button[aria-selected="true"] {
+        color: #55e6bd;
+        background: rgba(85, 230, 189, .09);
+        box-shadow: inset 0 0 0 1px rgba(85, 230, 189, .2);
+      }
+      .tab-button[aria-selected="true"] .tab-dot { background: #55e6bd; }
+      .strength-fill { transition: width .35s ease, background-color .35s ease; }
+      input[type="range"] { accent-color: #55e6bd; }
+      input[type="checkbox"] { accent-color: #55e6bd; }
+      #qrcode img, #qrcode canvas { border-radius: 8px; }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+      }
+    </style>
+  </head>
+  <body class="min-h-screen text-slate-100 antialiased selection:bg-mint/30">
+    <div class="grid-texture pointer-events-none fixed inset-0 -z-10"></div>
+    <div class="mx-auto min-h-screen max-w-7xl px-4 sm:px-6 lg:px-8">
+      <header class="flex items-center justify-between border-b border-white/[.07] py-5">
+        <a href="#" class="flex items-center gap-3" aria-label="Vaultline home">
+          <span class="grid h-10 w-10 place-items-center rounded-xl border border-mint/20 bg-mint/[.08] text-mint">
+            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" aria-hidden="true">
+              <path d="M12 3 19 6v5c0 4.7-2.9 8-7 10-4.1-2-7-5.3-7-10V6l7-3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+              <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span>
+            <span class="block text-sm font-semibold tracking-[.16em] text-white">VAULTLINE</span>
+            <span class="block text-[10px] tracking-[.18em] text-muted">PASSWORD SECURITY</span>
+          </span>
+        </a>
+        <div class="hidden items-center gap-2 rounded-full border border-white/[.08] bg-white/[.03] px-3 py-1.5 text-xs text-muted sm:flex">
+          <span class="h-1.5 w-1.5 rounded-full bg-mint shadow-[0_0_8px_#55e6bd]"></span>
+          Local API · 127.0.0.1:8000
+        </div>
+      </header>
+
+      <main class="py-9 sm:py-12">
+        <section class="mb-8 max-w-3xl">
+          <p class="mb-3 text-xs font-semibold uppercase tracking-[.2em] text-mint">Personal security toolkit</p>
+          <h1 class="text-3xl font-semibold tracking-tight text-white sm:text-4xl">Make every secret stronger.</h1>
+          <p class="mt-3 max-w-2xl text-sm leading-6 text-muted sm:text-base">
+            Check, create, and protect your credentials with privacy-first tools. Passwords are processed by your local security API.
+          </p>
+        </section>
+
+        <div class="grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
+          <aside class="min-w-0 lg:pt-1">
+            <p class="mb-3 hidden px-3 text-[10px] font-semibold uppercase tracking-[.18em] text-slate-500 lg:block">Security tools</p>
+            <nav aria-label="Security tools" role="tablist" class="flex w-full gap-2 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0">
+              <button id="tab-strength" class="tab-button flex shrink-0 items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-slate-300 transition hover:bg-white/[.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-mint/70 lg:w-full" role="tab" aria-selected="true" aria-controls="panel-strength" tabindex="0">
+                <span class="tab-dot h-1.5 w-1.5 rounded-full bg-slate-600"></span>
+                <span class="flex-1">Password strength</span>
+                <span class="hidden text-[10px] text-slate-500 lg:inline">01</span>
+              </button>
+              <button id="tab-generator" class="tab-button flex shrink-0 items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-slate-300 transition hover:bg-white/[.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-mint/70 lg:w-full" role="tab" aria-selected="false" aria-controls="panel-generator" tabindex="-1">
+                <span class="tab-dot h-1.5 w-1.5 rounded-full bg-slate-600"></span>
+                <span class="flex-1">Password generator</span>
+                <span class="hidden text-[10px] text-slate-500 lg:inline">02</span>
+              </button>
+              <button id="tab-passphrase" class="tab-button flex shrink-0 items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-slate-300 transition hover:bg-white/[.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-mint/70 lg:w-full" role="tab" aria-selected="false" aria-controls="panel-passphrase" tabindex="-1">
+                <span class="tab-dot h-1.5 w-1.5 rounded-full bg-slate-600"></span>
+                <span class="flex-1">Passphrase</span>
+                <span class="hidden text-[10px] text-slate-500 lg:inline">03</span>
+              </button>
+              <button id="tab-twofactor" class="tab-button flex shrink-0 items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-slate-300 transition hover:bg-white/[.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-mint/70 lg:w-full" role="tab" aria-selected="false" aria-controls="panel-twofactor" tabindex="-1">
+                <span class="tab-dot h-1.5 w-1.5 rounded-full bg-slate-600"></span>
+                <span class="flex-1">Two-factor auth</span>
+                <span class="hidden text-[10px] text-slate-500 lg:inline">04</span>
+              </button>
+              <button id="tab-breach" class="tab-button flex shrink-0 items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-slate-300 transition hover:bg-white/[.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-mint/70 lg:w-full" role="tab" aria-selected="false" aria-controls="panel-breach" tabindex="-1">
+                <span class="tab-dot h-1.5 w-1.5 rounded-full bg-slate-600"></span>
+                <span class="flex-1">Breach check</span>
+                <span class="hidden text-[10px] text-slate-500 lg:inline">05</span>
+              </button>
+            </nav>
+            <div class="mt-7 hidden rounded-2xl border border-white/[.07] bg-white/[.025] p-4 lg:block">
+              <div class="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
+                <svg class="h-4 w-4 text-mint" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 19 6v5c0 4.7-2.9 8-7 10-4.1-2-7-5.3-7-10V6l7-3Z" stroke="currentColor" stroke-width="1.6"/><path d="M9 12h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                Privacy by design
+              </div>
+              <p class="text-xs leading-5 text-muted">Breach checks use HIBP k-anonymity. Only a short hash prefix leaves your device.</p>
+            </div>
+          </aside>
+
+          <div class="min-w-0">
+            <section id="panel-strength" class="tool-panel rounded-2xl border border-white/[.08] bg-panel/90 p-5 shadow-glow sm:p-8" role="tabpanel" aria-labelledby="tab-strength">
+              <div class="mb-7 flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p class="mb-2 text-[10px] font-semibold uppercase tracking-[.18em] text-mint">01 / Analyze</p>
+                  <h2 class="text-xl font-semibold text-white">Password strength</h2>
+                  <p class="mt-1 text-sm text-muted">Get a real-time estimate of how resilient your password is.</p>
+                </div>
+                <span class="rounded-full border border-white/[.08] bg-white/[.03] px-3 py-1 text-[11px] text-slate-400">zxcvbn analysis</span>
+              </div>
+              <label for="strength-password" class="mb-2 block text-xs font-medium text-slate-300">Password to analyze</label>
+              <div class="relative">
+                <input id="strength-password" type="password" autocomplete="new-password" maxlength="256" placeholder="Type a password to begin…" class="w-full rounded-xl border border-line bg-ink/70 px-4 py-3.5 pr-20 font-mono text-sm text-white outline-none transition placeholder:font-sans placeholder:text-slate-600 focus:border-mint/60 focus:ring-2 focus:ring-mint/10" />
+                <button id="strength-toggle" type="button" class="absolute inset-y-0 right-0 px-4 text-xs text-muted hover:text-white focus:outline-none focus-visible:text-mint" aria-label="Show password">Show</button>
+              </div>
+              <div class="mt-7 rounded-xl border border-white/[.06] bg-ink/45 p-4 sm:p-5">
+                <div class="mb-3 flex items-center justify-between gap-3">
+                  <span class="text-xs font-medium text-slate-300">Strength</span>
+                  <span id="strength-label" class="text-xs font-semibold text-muted">Waiting for input</span>
+                </div>
+                <div class="h-2 overflow-hidden rounded-full bg-slate-800" role="progressbar" aria-label="Password strength score" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0">
+                  <div id="strength-bar" class="strength-fill h-full w-0 rounded-full bg-slate-600"></div>
+                </div>
+                <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div class="rounded-lg border border-white/[.05] bg-white/[.02] p-3">
+                    <p class="text-[10px] uppercase tracking-[.14em] text-slate-500">Estimated crack time</p>
+                    <p id="crack-time" class="mt-1 text-sm font-medium text-slate-300">—</p>
+                    <p class="mt-1 text-[10px] text-slate-500">Offline fast-hash estimate</p>
+                  </div>
+                  <div id="strength-warning-wrap" class="rounded-lg border border-white/[.05] bg-white/[.02] p-3">
+                    <p class="text-[10px] uppercase tracking-[.14em] text-slate-500">Warning</p>
+                    <p id="strength-warning" class="mt-1 text-sm leading-5 text-slate-300">Enter a password to see feedback.</p>
+                  </div>
+                </div>
+                <div class="mt-4">
+                  <p class="mb-2 text-[10px] uppercase tracking-[.14em] text-slate-500">Suggestions</p>
+                  <ul id="strength-suggestions" class="space-y-1.5 text-sm text-slate-300" aria-live="polite">
+                    <li class="text-muted">Suggestions will appear here.</li>
+                  </ul>
+                </div>
+              </div>
+              <p id="strength-status" class="mt-4 min-h-5 text-xs text-muted" role="status" aria-live="polite"></p>
+              <p class="mt-2 text-[11px] leading-5 text-slate-500">Analysis is sent to your local API. Avoid entering a password you currently use on a sensitive account.</p>
+            </section>
+
+            <section id="panel-generator" class="tool-panel hidden rounded-2xl border border-white/[.08] bg-panel/90 p-5 shadow-glow sm:p-8" role="tabpanel" aria-labelledby="tab-generator" hidden>
+              <div class="mb-7">
+                <p class="mb-2 text-[10px] font-semibold uppercase tracking-[.18em] text-mint">02 / Create</p>
+                <h2 class="text-xl font-semibold text-white">Secure password generator</h2>
+                <p class="mt-1 text-sm text-muted">Create a high-entropy password with the character sets you choose.</p>
+              </div>
+              <div class="rounded-xl border border-white/[.06] bg-ink/45 p-4 sm:p-5">
+                <div class="mb-2 flex items-center justify-between">
+                  <label for="password-length" class="text-xs font-medium text-slate-300">Password length</label>
+                  <output id="password-length-value" for="password-length" class="font-mono text-sm text-mint">20</output>
+                </div>
+                <input id="password-length" type="range" min="8" max="64" value="20" class="w-full cursor-pointer" />
+                <div class="mt-1 flex justify-between text-[10px] text-slate-500"><span>8 characters</span><span>64 characters</span></div>
+                <fieldset class="mt-6">
+                  <legend class="mb-3 text-xs font-medium text-slate-300">Include character types</legend>
+                  <div class="grid gap-3 sm:grid-cols-3">
+                    <label class="flex cursor-pointer items-center gap-2.5 rounded-lg border border-white/[.06] bg-white/[.02] p-3 text-xs text-slate-300 hover:border-white/[.12]">
+                      <input id="include-uppercase" type="checkbox" checked class="h-4 w-4 rounded border-line" /> Uppercase
+                    </label>
+                    <label class="flex cursor-pointer items-center gap-2.5 rounded-lg border border-white/[.06] bg-white/[.02] p-3 text-xs text-slate-300 hover:border-white/[.12]">
+                      <input id="include-digits" type="checkbox" checked class="h-4 w-4 rounded border-line" /> Digits
+                    </label>
+                    <label class="flex cursor-pointer items-center gap-2.5 rounded-lg border border-white/[.06] bg-white/[.02] p-3 text-xs text-slate-300 hover:border-white/[.12]">
+                      <input id="include-special" type="checkbox" checked class="h-4 w-4 rounded border-line" /> Special characters
+                    </label>
+                  </div>
+                  <p class="mt-3 text-[11px] text-slate-500">Lowercase letters are always included. Every enabled character type is guaranteed.</p>
+                </fieldset>
+              </div>
+              <button id="generate-password" type="button" class="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-mint px-4 py-3 text-sm font-semibold text-ink transition hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-wait disabled:opacity-60 sm:w-auto">
+                <span class="button-label">Generate password</span>
+              </button>
+              <div id="password-result-wrap" class="mt-5 hidden rounded-xl border border-mint/15 bg-mint/[.04] p-4">
+                <p class="mb-2 text-[10px] font-semibold uppercase tracking-[.14em] text-mint">Your generated password</p>
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <code id="password-result" class="min-w-0 flex-1 break-all font-mono text-sm leading-6 text-white"></code>
+                  <button type="button" data-copy="password-result" class="copy-button shrink-0 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-slate-300 transition hover:border-mint/40 hover:text-mint focus:outline-none focus-visible:ring-2 focus-visible:ring-mint/60">Copy to clipboard</button>
+                </div>
+              </div>
+              <p id="generator-status" class="mt-4 min-h-5 text-xs text-muted" role="status" aria-live="polite"></p>
+            </section>
+
+            <section id="panel-passphrase" class="tool-panel hidden rounded-2xl border border-white/[.08] bg-panel/90 p-5 shadow-glow sm:p-8" role="tabpanel" aria-labelledby="tab-passphrase" hidden>
+              <div class="mb-7">
+                <p class="mb-2 text-[10px] font-semibold uppercase tracking-[.18em] text-mint">03 / Remember</p>
+                <h2 class="text-xl font-semibold text-white">Text-based Passphrase Generation</h2>
+                <p class="mt-1 text-sm text-muted">Each part keeps its character count while using randomized mixed case and occasional digits or symbols.</p>
+              </div>
+              <div class="grid gap-5 rounded-xl border border-white/[.06] bg-ink/45 p-4 sm:p-5">
+                <div>
+                  <label for="passphrase-description" class="mb-2 block text-xs font-medium text-slate-300">Your description</label>
+                  <textarea id="passphrase-description" maxlength="300" required rows="3" placeholder="Describe a topic, place, or idea..." class="w-full resize-y rounded-lg border border-line bg-ink px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-mint/60 focus:ring-2 focus:ring-mint/10"></textarea>
+                </div>
+                <div class="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <div class="mb-2 flex items-center justify-between">
+                      <label for="word-count" class="text-xs font-medium text-slate-300">Number of parts</label>
+                      <output id="word-count-value" for="word-count" class="font-mono text-sm text-mint">8</output>
+                    </div>
+                    <input id="word-count" type="range" min="6" max="16" value="8" class="w-full cursor-pointer" />
+                    <div class="mt-1 flex justify-between text-[10px] text-slate-500"><span>6 parts</span><span>16 parts</span></div>
+                  </div>
+                  <div>
+                    <label for="passphrase-separator" class="mb-2 block text-xs font-medium text-slate-300">Separator (1–8 characters)</label>
+                    <input id="passphrase-separator" type="text" value="-" minlength="1" maxlength="8" required class="w-full rounded-lg border border-line bg-ink px-3 py-2.5 text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10" />
+                  </div>
+                </div>
+              </div>
+              <button id="generate-passphrase" type="button" class="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-mint px-4 py-3 text-sm font-semibold text-ink transition hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-wait disabled:opacity-60 sm:w-auto">
+                <span class="button-label">Generate passphrase</span>
+              </button>
+              <div id="passphrase-result-wrap" class="mt-5 hidden rounded-xl border border-mint/15 bg-mint/[.04] p-4">
+                <p class="mb-2 text-[10px] font-semibold uppercase tracking-[.14em] text-mint">Your generated passphrase</p>
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <code id="passphrase-result" class="min-w-0 flex-1 break-all font-mono text-sm leading-6 text-white"></code>
+                  <button type="button" data-copy="passphrase-result" class="copy-button shrink-0 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-slate-300 transition hover:border-mint/40 hover:text-mint focus:outline-none focus-visible:ring-2 focus-visible:ring-mint/60">Copy to clipboard</button>
+                </div>
+                <p id="passphrase-count" class="mt-3 text-[11px] text-muted"></p>
+              </div>
+              <p id="passphrase-status" class="mt-4 min-h-5 text-xs text-muted" role="status" aria-live="polite"></p>
+            </section>
+
+            <section id="panel-twofactor" class="tool-panel hidden rounded-2xl border border-white/[.08] bg-panel/90 p-5 shadow-glow sm:p-8" role="tabpanel" aria-labelledby="tab-twofactor" hidden>
+              <div class="mb-7">
+                <p class="mb-2 text-[10px] font-semibold uppercase tracking-[.18em] text-mint">04 / Verify</p>
+                <h2 class="text-xl font-semibold text-white">Two-factor authentication</h2>
+                <p class="mt-1 text-sm text-muted">Set up an authenticator app with a time-based one-time password.</p>
+              </div>
+              <div class="grid gap-6 md:grid-cols-[minmax(0,1fr)_190px]">
+                <div>
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label for="totp-account" class="mb-2 block text-xs font-medium text-slate-300">Account label</label>
+                      <input id="totp-account" type="text" maxlength="200" value="my-account" autocomplete="off" class="w-full rounded-lg border border-line bg-ink/70 px-3 py-2.5 text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10" />
+                    </div>
+                    <div>
+                      <label for="totp-issuer" class="mb-2 block text-xs font-medium text-slate-300">Issuer</label>
+                      <input id="totp-issuer" type="text" maxlength="64" value="Vaultline" autocomplete="off" class="w-full rounded-lg border border-line bg-ink/70 px-3 py-2.5 text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10" />
+                    </div>
+                  </div>
+                  <button id="generate-totp" type="button" class="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-mint px-4 py-3 text-sm font-semibold text-ink transition hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-wait disabled:opacity-60">
+                    <span class="button-label">Create authenticator secret</span>
+                  </button>
+                  <div id="totp-setup" class="mt-5 hidden">
+                    <label for="totp-secret" class="mb-2 block text-xs font-medium text-slate-300">Secret key</label>
+                    <div class="flex flex-col gap-2 sm:flex-row">
+                      <input id="totp-secret" type="text" readonly class="min-w-0 flex-1 rounded-lg border border-line bg-ink/70 px-3 py-2.5 font-mono text-sm text-mint outline-none" />
+                      <button type="button" data-copy="totp-secret" class="copy-button rounded-lg border border-white/10 px-3 py-2 text-xs text-slate-300 hover:border-mint/40 hover:text-mint">Copy secret</button>
+                    </div>
+                    <div class="mt-5 rounded-xl border border-white/[.06] bg-ink/45 p-4">
+                      <p class="mb-3 text-xs font-medium text-slate-300">Scan with your authenticator app</p>
+                      <div id="qrcode" class="inline-flex min-h-[168px] min-w-[168px] items-center justify-center rounded-lg bg-white p-2" aria-label="Authenticator setup QR code"></div>
+                    </div>
+                    <div class="mt-6 border-t border-white/[.07] pt-5">
+                      <label for="totp-token" class="mb-2 block text-xs font-medium text-slate-300">Enter your 6-digit code</label>
+                      <div class="flex flex-col gap-3 sm:flex-row">
+                        <input id="totp-token" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" class="w-full rounded-lg border border-line bg-ink/70 px-3 py-3 font-mono text-lg tracking-[.3em] text-white outline-none placeholder:text-slate-700 focus:border-mint/60 focus:ring-2 focus:ring-mint/10 sm:max-w-48" />
+                        <button id="verify-totp" type="button" class="rounded-xl border border-mint/30 bg-mint/[.08] px-5 py-3 text-sm font-semibold text-mint transition hover:bg-mint/[.15] focus:outline-none focus-visible:ring-2 focus-visible:ring-mint/60 disabled:cursor-wait disabled:opacity-60">
+                          <span class="button-label">Verify code</span>
+                        </button>
+                      </div>
+                      <div id="totp-result" class="mt-3 hidden" role="status" aria-live="polite"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="hidden rounded-xl border border-white/[.06] bg-ink/45 p-4 md:block">
+                  <p class="text-xs font-medium text-slate-300">How it works</p>
+                  <ol class="mt-3 space-y-3 text-xs leading-5 text-muted">
+                    <li><span class="mr-2 text-mint">01</span>Create a unique secret.</li>
+                    <li><span class="mr-2 text-mint">02</span>Scan the QR code in your authenticator app.</li>
+                    <li><span class="mr-2 text-mint">03</span>Enter the current 6-digit code to verify.</li>
+                  </ol>
+                  <p class="mt-5 border-t border-white/[.06] pt-4 text-[11px] leading-5 text-amber-200/70">Keep the secret private. Anyone with it can generate your codes.</p>
+                </div>
+              </div>
+              <p id="totp-status" class="mt-4 min-h-5 text-xs text-muted" role="status" aria-live="polite"></p>
+            </section>
+
+            <section id="panel-breach" class="tool-panel hidden rounded-2xl border border-white/[.08] bg-panel/90 p-5 shadow-glow sm:p-8" role="tabpanel" aria-labelledby="tab-breach" hidden>
+              <div class="mb-7">
+                <p class="mb-2 text-[10px] font-semibold uppercase tracking-[.18em] text-mint">05 / Protect</p>
+                <h2 class="text-xl font-semibold text-white">Breached password check</h2>
+                <p class="mt-1 text-sm text-muted">Check whether a password appears in known data breaches.</p>
+              </div>
+              <div class="rounded-xl border border-white/[.06] bg-ink/45 p-4 sm:p-5">
+                <label for="breach-password" class="mb-2 block text-xs font-medium text-slate-300">Password to check</label>
+                <div class="flex flex-col gap-3 sm:flex-row">
+                  <div class="relative min-w-0 flex-1">
+                    <input id="breach-password" type="password" autocomplete="off" maxlength="256" placeholder="Enter a password…" class="w-full rounded-lg border border-line bg-ink/70 px-3 py-3 pr-16 font-mono text-sm text-white outline-none placeholder:font-sans placeholder:text-slate-600 focus:border-mint/60 focus:ring-2 focus:ring-mint/10" />
+                    <button id="breach-toggle" type="button" class="absolute inset-y-0 right-0 px-3 text-xs text-muted hover:text-white focus:outline-none focus-visible:text-mint" aria-label="Show password">Show</button>
+                  </div>
+                  <button id="check-breach" type="button" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-mint px-5 py-3 text-sm font-semibold text-ink transition hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-wait disabled:opacity-60">
+                    <span class="button-label">Check breach</span>
+                  </button>
+                </div>
+                <p class="mt-3 flex items-start gap-2 text-[11px] leading-5 text-slate-500">
+                  <svg class="mt-0.5 h-3.5 w-3.5 shrink-0 text-mint" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 19 6v5c0 4.7-2.9 8-7 10-4.1-2-7-5.3-7-10V6l7-3Z" stroke="currentColor" stroke-width="1.7"/><path d="M9 12h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                  Your password is hashed locally. Only the first five characters of its SHA-1 hash are sent to HIBP; the full password is never sent to that service.
+                </p>
+              </div>
+              <div id="breach-result" class="mt-5 hidden rounded-xl border p-4" role="status" aria-live="polite"></div>
+              <p id="breach-status" class="mt-4 min-h-5 text-xs text-muted" role="status" aria-live="polite"></p>
+            </section>
+          </div>
+        </div>
+      </main>
+      <footer class="flex flex-col gap-2 border-t border-white/[.07] py-5 text-[11px] text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+        <span>Vaultline Security Toolkit</span>
+        <span>API: <code class="text-slate-400">http://127.0.0.1:8000</code> · Keep your credentials private.</span>
+      </footer>
+    </div>
+
+    <script>
+      "use strict";
+
+      const API_BASE = "http://127.0.0.1:8000";
+      const strengthInput = document.getElementById("strength-password");
+      const strengthBar = document.getElementById("strength-bar");
+      const strengthProgress = document.querySelector('[role="progressbar"]');
+      const strengthNames = ["Very weak", "Weak", "Fair", "Strong", "Very strong"];
+      const strengthColors = ["#fb7185", "#fb923c", "#facc15", "#a3e635", "#55e6bd"];
+      let strengthTimer;
+      let strengthController;
+      let strengthRequestId = 0;
+      let activeTotpSecret = "";
+
+      async function apiRequest(path, options = {}) {
+        let response;
+        try {
+          response = await fetch(`${API_BASE}${path}`, {
+            ...options,
+            headers: { "Content-Type": "application/json", ...options.headers },
+          });
+        } catch (error) {
+          if (options.signal && options.signal.aborted) throw error;
+          throw new Error("Cannot reach the local API. Start the FastAPI server at 127.0.0.1:8000 and try again.");
+        }
+
+        let data;
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error(`The API returned an unreadable response (HTTP ${response.status}).`);
+        }
+        if (!response.ok) {
+          const detail = Array.isArray(data.detail)
+            ? data.detail.map((item) => item.msg).join(", ")
+            : data.detail;
+          throw new Error(detail || `Request failed (HTTP ${response.status}).`);
+        }
+        return data;
+      }
+
+      function setStatus(id, message, isError = false) {
+        const element = document.getElementById(id);
+        element.textContent = message;
+        element.className = `mt-4 min-h-5 text-xs ${isError ? "text-rose-300" : "text-muted"}`;
+      }
+
+      function setLoading(button, isLoading, label) {
+        button.disabled = isLoading;
+        const text = button.querySelector(".button-label");
+        if (text) text.textContent = isLoading ? "Working…" : label;
+      }
+
+      function activateTab(tab) {
+        document.querySelectorAll('[role="tab"]').forEach((item) => {
+          const selected = item === tab;
+          item.setAttribute("aria-selected", String(selected));
+          item.tabIndex = selected ? 0 : -1;
+          const panel = document.getElementById(item.getAttribute("aria-controls"));
+          panel.hidden = !selected;
+          panel.classList.toggle("hidden", !selected);
+        });
+      }
+
+      document.querySelectorAll('[role="tab"]').forEach((tab, index, tabs) => {
+        tab.addEventListener("click", () => activateTab(tab));
+        tab.addEventListener("keydown", (event) => {
+          if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
+          event.preventDefault();
+          const targetIndex = event.key === "Home" ? 0
+            : event.key === "End" ? tabs.length - 1
+            : (index + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length;
+          tabs[targetIndex].focus();
+          activateTab(tabs[targetIndex]);
+        });
+      });
+
+      function configureVisibilityToggle(buttonId, inputId) {
+        const button = document.getElementById(buttonId);
+        const input = document.getElementById(inputId);
+        button.addEventListener("click", () => {
+          const show = input.type === "password";
+          input.type = show ? "text" : "password";
+          button.textContent = show ? "Hide" : "Show";
+          button.setAttribute("aria-label", `${show ? "Hide" : "Show"} password`);
+        });
+      }
+      configureVisibilityToggle("strength-toggle", "strength-password");
+      configureVisibilityToggle("breach-toggle", "breach-password");
+
+      function renderStrength(result) {
+        const score = Math.max(0, Math.min(4, Number(result.score) || 0));
+        const percentage = score === 0 ? 8 : score * 25;
+        strengthBar.style.width = `${percentage}%`;
+        strengthBar.style.backgroundColor = strengthColors[score];
+        strengthProgress.setAttribute("aria-valuenow", String(score));
+        const label = document.getElementById("strength-label");
+        label.textContent = strengthNames[score];
+        label.style.color = strengthColors[score];
+
+        const estimates = result.estimated_crack_time || {};
+        document.getElementById("crack-time").textContent =
+          estimates.offline_fast_hashing_1e10_per_second || "Unavailable";
+
+        const warning = result.feedback && result.feedback.warning;
+        const warningElement = document.getElementById("strength-warning");
+        warningElement.textContent = warning || (score >= 3 ? "No major weaknesses detected." : "No specific warning.");
+
+        const suggestions = (result.feedback && result.feedback.suggestions) || [];
+        const list = document.getElementById("strength-suggestions");
+        list.replaceChildren();
+        if (suggestions.length === 0) {
+          const item = document.createElement("li");
+          item.className = "text-muted";
+          item.textContent = score >= 3 ? "No suggestions — this looks good." : "Try using a longer, less predictable phrase.";
+          list.append(item);
+        } else {
+          suggestions.forEach((suggestion) => {
+            const item = document.createElement("li");
+            item.className = "flex gap-2";
+            const marker = document.createElement("span");
+            marker.className = "text-mint";
+            marker.textContent = "›";
+            const text = document.createElement("span");
+            text.textContent = suggestion;
+            item.append(marker, text);
+            list.append(item);
+          });
+        }
+      }
+
+      function resetStrength() {
+        strengthBar.style.width = "0";
+        strengthBar.style.backgroundColor = "";
+        strengthProgress.setAttribute("aria-valuenow", "0");
+        document.getElementById("strength-label").textContent = "Waiting for input";
+        document.getElementById("strength-label").style.color = "";
+        document.getElementById("crack-time").textContent = "—";
+        document.getElementById("strength-warning").textContent = "Enter a password to see feedback.";
+        document.getElementById("strength-suggestions").innerHTML =
+          '<li class="text-muted">Suggestions will appear here.</li>';
+      }
+
+      strengthInput.addEventListener("input", () => {
+        clearTimeout(strengthTimer);
+        const requestId = ++strengthRequestId;
+        if (strengthController) strengthController.abort();
+        const password = strengthInput.value;
+        if (!password) {
+          resetStrength();
+          setStatus("strength-status", "");
+          return;
+        }
+        setStatus("strength-status", "Analyzing…");
+        strengthTimer = setTimeout(async () => {
+          strengthController = new AbortController();
+          try {
+            const result = await apiRequest("/api/v1/password/strength", {
+              method: "POST",
+              body: JSON.stringify({ password }),
+              signal: strengthController.signal,
+            });
+            if (requestId !== strengthRequestId) return;
+            renderStrength(result);
+            setStatus("strength-status", "Analysis complete.");
+          } catch (error) {
+            if (error.name !== "AbortError" && requestId === strengthRequestId) {
+              setStatus("strength-status", error.message, true);
+            }
+          }
+        }, 350);
+      });
+
+      document.getElementById("password-length").addEventListener("input", (event) => {
+        document.getElementById("password-length-value").value = event.target.value;
+      });
+      document.getElementById("word-count").addEventListener("input", (event) => {
+        document.getElementById("word-count-value").value = event.target.value;
+      });
+
+      document.getElementById("generate-password").addEventListener("click", async (event) => {
+        const button = event.currentTarget;
+        setStatus("generator-status", "");
+        setLoading(button, true, "Generate password");
+        const query = new URLSearchParams({
+          length: document.getElementById("password-length").value,
+          uppercase: String(document.getElementById("include-uppercase").checked),
+          digits: String(document.getElementById("include-digits").checked),
+          special: String(document.getElementById("include-special").checked),
+        });
+        try {
+          const result = await apiRequest(`/api/v1/password/generate?${query}`);
+          document.getElementById("password-result").textContent = result.password;
+          document.getElementById("password-result-wrap").classList.remove("hidden");
+          setStatus("generator-status", "Password generated. It is not stored by this page.");
+        } catch (error) {
+          setStatus("generator-status", error.message, true);
+        } finally {
+          setLoading(button, false, "Generate password");
+        }
+      });
+
+      document.getElementById("generate-passphrase").addEventListener("click", async (event) => {
+        const button = event.currentTarget;
+        setStatus("passphrase-status", "");
+        setLoading(button, true, "Generate passphrase");
+        try {
+          const result = await apiRequest("/api/v1/passphrase/generate-from-description", {
+            method: "POST",
+            body: JSON.stringify({
+              description: document.getElementById("passphrase-description").value,
+              length: Number(document.getElementById("word-count").value),
+              separator: document.getElementById("passphrase-separator").value,
+            }),
+          });
+          document.getElementById("passphrase-result").textContent = result.passphrase;
+          document.getElementById("passphrase-count").textContent =
+            `Generated ${result.word_count} unique hardened parts.`;
+          document.getElementById("passphrase-result-wrap").classList.remove("hidden");
+          setStatus("passphrase-status", "Passphrase generated. It is not stored by this page.");
+        } catch (error) {
+          setStatus("passphrase-status", error.message, true);
+        } finally {
+          setLoading(button, false, "Generate passphrase");
+        }
+      });
+
+      async function copyText(value) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(value);
+          return;
+        }
+        const temporary = document.createElement("textarea");
+        temporary.value = value;
+        temporary.style.position = "fixed";
+        temporary.style.opacity = "0";
+        document.body.append(temporary);
+        temporary.select();
+        const copied = document.execCommand("copy");
+        temporary.remove();
+        if (!copied) throw new Error("Clipboard access was blocked by the browser.");
+      }
+
+      document.querySelectorAll(".copy-button").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const target = document.getElementById(button.dataset.copy);
+          const value = target.value !== undefined ? target.value : target.textContent;
+          const previousText = button.textContent;
+          try {
+            await copyText(value);
+            button.textContent = "Copied";
+            setTimeout(() => { button.textContent = previousText; }, 1400);
+          } catch (error) {
+            button.textContent = "Copy failed";
+            button.title = error.message;
+            setTimeout(() => { button.textContent = previousText; }, 1800);
+          }
+        });
+      });
+
+      document.getElementById("generate-totp").addEventListener("click", async (event) => {
+        const button = event.currentTarget;
+        setStatus("totp-status", "");
+        setLoading(button, true, "Create authenticator secret");
+        document.getElementById("totp-result").classList.add("hidden");
+        try {
+          const result = await apiRequest("/api/v1/2fa/generate", {
+            method: "POST",
+            body: JSON.stringify({
+              account_name: document.getElementById("totp-account").value.trim(),
+              issuer: document.getElementById("totp-issuer").value.trim(),
+            }),
+          });
+          activeTotpSecret = result.secret;
+          document.getElementById("totp-secret").value = result.secret;
+          document.getElementById("totp-token").value = "";
+          document.getElementById("totp-setup").classList.remove("hidden");
+          const qr = document.getElementById("qrcode");
+          qr.replaceChildren();
+          if (typeof QRCode === "undefined") {
+            throw new Error("The QR code library could not be loaded. Check your internet connection and try again.");
+          }
+          new QRCode(qr, {
+            text: result.provisioning_uri,
+            width: 152,
+            height: 152,
+            colorDark: "#08111d",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M,
+          });
+          setStatus("totp-status", "Secret created. Scan the QR code, then verify a code from your authenticator.");
+        } catch (error) {
+          setStatus("totp-status", error.message, true);
+        } finally {
+          setLoading(button, false, "Create authenticator secret");
+        }
+      });
+
+      document.getElementById("verify-totp").addEventListener("click", async (event) => {
+        const button = event.currentTarget;
+        const token = document.getElementById("totp-token").value.trim();
+        const resultElement = document.getElementById("totp-result");
+        resultElement.classList.add("hidden");
+        if (!activeTotpSecret) {
+          setStatus("totp-status", "Create a secret before verifying a code.", true);
+          return;
+        }
+        if (!/^\d{6}$/.test(token)) {
+          setStatus("totp-status", "Enter a valid 6-digit code.", true);
+          return;
+        }
+        setStatus("totp-status", "");
+        setLoading(button, true, "Verify code");
+        try {
+          const result = await apiRequest("/api/v1/2fa/verify", {
+            method: "POST",
+            body: JSON.stringify({ secret: activeTotpSecret, token }),
+          });
+          resultElement.className = result.valid
+            ? "mt-3 rounded-lg border border-emerald-400/20 bg-emerald-400/[.08] px-3 py-2 text-sm text-emerald-300"
+            : "mt-3 rounded-lg border border-rose-400/20 bg-rose-400/[.08] px-3 py-2 text-sm text-rose-300";
+          resultElement.textContent = result.valid ? "Valid — authenticator is set up correctly." : "Invalid — check the code and try again.";
+        } catch (error) {
+          setStatus("totp-status", error.message, true);
+        } finally {
+          setLoading(button, false, "Verify code");
+        }
+      });
+
+      document.getElementById("totp-token").addEventListener("input", (event) => {
+        event.target.value = event.target.value.replace(/\D/g, "").slice(0, 6);
+      });
+
+      document.getElementById("check-breach").addEventListener("click", async (event) => {
+        const button = event.currentTarget;
+        const password = document.getElementById("breach-password").value;
+        const resultElement = document.getElementById("breach-result");
+        resultElement.classList.add("hidden");
+        if (!password) {
+          setStatus("breach-status", "Enter a password to check.", true);
+          return;
+        }
+        setStatus("breach-status", "");
+        setLoading(button, true, "Check breach");
+        try {
+          const result = await apiRequest("/api/v1/password/breach-check", {
+            method: "POST",
+            body: JSON.stringify({ password }),
+          });
+          resultElement.replaceChildren();
+          const heading = document.createElement("p");
+          const detail = document.createElement("p");
+          detail.className = "mt-1 text-sm";
+          if (result.compromised) {
+            resultElement.className = "mt-5 rounded-xl border border-rose-400/25 bg-rose-400/[.08] p-4 text-rose-200";
+            heading.className = "font-semibold";
+            heading.textContent = "This password has been exposed.";
+            detail.textContent = `It appeared ${Number(result.breach_count).toLocaleString()} times in known breaches. Change it anywhere you use it.`;
+          } else {
+            resultElement.className = "mt-5 rounded-xl border border-emerald-400/25 bg-emerald-400/[.08] p-4 text-emerald-200";
+            heading.className = "font-semibold";
+            heading.textContent = "No breach match found.";
+            detail.textContent = "This password was not found in the records checked. A match-free result does not guarantee a password is safe.";
+          }
+          resultElement.append(heading, detail);
+          resultElement.classList.remove("hidden");
+        } catch (error) {
+          setStatus("breach-status", error.message, true);
+        } finally {
+          setLoading(button, false, "Check breach");
+        }
+      });
+    </script>
+  </body>
+</html>
